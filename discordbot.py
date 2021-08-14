@@ -51,7 +51,7 @@ class WhaleCord(discord.Client):
             record = await self.transactions.get()
             print(f"Length of queue: {self.transactions.qsize()}")
             amount = int(record[-1]["deposit"][0:-21]) / 1e3
-            if amount > 1:
+            if amount > 1000:
                 tx_hash = record[1]
                 sender = record[2] if ".near" in record[2] else "unkown"
                 receiver = record[3] if ".near" in record[3] else "unkown"
