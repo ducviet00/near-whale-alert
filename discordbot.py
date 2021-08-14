@@ -1,9 +1,10 @@
 import asyncio
 import time
-from discord import channel
-import psycopg2
-from utils.db_queries import *
+
 import discord
+import psycopg2
+
+from utils.db_queries import *
 
 TOKEN = input("INPUT TOKEN:\n")
 
