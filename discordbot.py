@@ -1,6 +1,7 @@
 import asyncio
 import time
 
+import aiohttp
 import discord
 import psycopg2
 
@@ -15,9 +16,14 @@ class WhaleCord(discord.Client):
         self.conn = psycopg2.connect(CONNECTION, **keepalive_kwargs)
         self.transactions = asyncio.Queue()
         self.last_time = str(int(time.time() * 1000)) + "000000"
-        self.channels = []
+        self.near_price = 3.14
+        with open("subcribers.txt", "r") as f:
+            id_channels = f.readlines()
+            id_channels = [int(i.strip()) for i in id_channels]
+        self.channels = [self.get_channel(i) for i in id_channels]
         self.producer = self.loop.create_task(self.stream_database())
         self.consumer = self.loop.create_task(self.alert())
+        self.get_price = self.loop.create_task(self.get_near_price())
 
     async def on_ready(self):
         print("Logged in as")
@@ -52,17 +58,29 @@ class WhaleCord(discord.Client):
             record = await self.transactions.get()
             print(f"Length of queue: {self.transactions.qsize()}")
             amount = int(record[-1]["deposit"][0:-21]) / 1e3
-            if amount > 1000:
+            amount_usd = amount * self.near_price
+            if amount_usd > 100_000:
+                alert = "🚨" * (amount_usd // 100_000)
                 tx_hash = record[1]
                 sender = record[2] if ".near" in record[2] else "unkown"
                 receiver = record[3] if ".near" in record[3] else "unkown"
                 for channel in self.channels:
                     await channel.send(
-                        f"""
-                        {amount} NEAR transferred from {sender} to {receiver} wallet
-                        https://explorer.near.org/transactions/{tx_hash}"
-                        """
+                        f"{alert} {amount:,.2f} NEAR - equal {amount_usd:,.2f} USD -"
+                        f" transferred from {sender} to {receiver} wallet\n"
+                        f"https://explorer.near.org/transactions/{tx_hash}"
                     )
+
+    async def get_near_price(self):
+        while True:
+            async with aiohttp.ClientSession() as session:
+                async with session.get(
+                    "https://api.binance.com/api/v3/ticker/price?symbol=NEARUSDT"
+                ) as response:
+                    res = await response.json()
+                    self.near_price = float(res["price"])
+
+            await asyncio.sleep(300)
 
     async def on_message(self, message):
         # we do not want the bot to reply to itself
@@ -70,6 +88,8 @@ class WhaleCord(discord.Client):
             return
         if message.content.startswith("$add-whale"):
             print(f"Adding channel {message.channel.name} id: {message.channel.id}")
+            with open("subcribers.txt", "a") as f:
+                f.write(f"{message.channel.id}\n")
             self.channels.append(message.channel)
             await message.channel.send(
                 f"Added channel {message.channel.name} to the subscriber channels"
