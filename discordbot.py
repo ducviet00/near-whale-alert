@@ -32,6 +32,7 @@ class WhaleCord(discord.Client):
             id_channels = f.readlines()
             id_channels = [int(i.strip()) for i in id_channels]
         self.channels = [self.get_channel(i) for i in id_channels]
+        self.channels = [c for c in self.channels if c]  # Remove deleted channels
 
     async def stream_database(self):
         while True:
@@ -62,8 +63,8 @@ class WhaleCord(discord.Client):
             print(f"Length of queue: {self.transactions.qsize()}")
             amount = int(record[-1]["deposit"][0:-21]) / 1e3
             amount_usd = amount * self.near_price
-            if amount_usd > 10:
-                alert = "🚨" * int(amount_usd // 10)
+            if amount_usd > 100_000:
+                alert = "🚨" * min(int(amount_usd // 100_000), 10)
                 tx_hash = record[1]
                 sender = record[2] if ".near" in record[2] else "unkown"
                 receiver = record[3] if ".near" in record[3] else "unkown"
