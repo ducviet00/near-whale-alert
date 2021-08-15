@@ -7,7 +7,7 @@ import psycopg2
 
 from utils.db_queries import *
 
-# TOKEN = input("INPUT TOKEN:\n")
+TOKEN = input("INPUT TOKEN:\n")
 
 
 class WhaleCord(discord.Client):
