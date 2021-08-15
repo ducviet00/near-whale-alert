@@ -7,7 +7,8 @@ import psycopg2
 
 from utils.db_queries import *
 
-TOKEN = input("INPUT TOKEN:\n")
+# TOKEN = input("INPUT TOKEN:\n")
+TOKEN = "ODc2MTg4MTg4Njk4MzYxOTE2.YRgb1g.-P3ygTBPoscL-mpw-J9TiIXxjEY"
 
 
 class WhaleCord(discord.Client):
@@ -17,10 +18,7 @@ class WhaleCord(discord.Client):
         self.transactions = asyncio.Queue()
         self.last_time = str(int(time.time() * 1000)) + "000000"
         self.near_price = 3.14
-        with open("subcribers.txt", "r") as f:
-            id_channels = f.readlines()
-            id_channels = [int(i.strip()) for i in id_channels]
-        self.channels = [self.get_channel(i) for i in id_channels]
+        self.channels = []
         self.producer = self.loop.create_task(self.stream_database())
         self.consumer = self.loop.create_task(self.alert())
         self.get_price = self.loop.create_task(self.get_near_price())
@@ -30,6 +28,10 @@ class WhaleCord(discord.Client):
         print(self.user.name)
         print(self.user.id)
         print("------")
+        with open("subcribers.txt", "r") as f:
+            id_channels = f.readlines()
+            id_channels = [int(i.strip()) for i in id_channels]
+        self.channels = [self.get_channel(i) for i in id_channels]
 
     async def stream_database(self):
         while True:
@@ -54,20 +56,22 @@ class WhaleCord(discord.Client):
             await asyncio.sleep(30)
 
     async def alert(self):
+        await self.wait_until_ready()
         while True:
             record = await self.transactions.get()
             print(f"Length of queue: {self.transactions.qsize()}")
             amount = int(record[-1]["deposit"][0:-21]) / 1e3
             amount_usd = amount * self.near_price
-            if amount_usd > 100_000:
-                alert = "🚨" * (amount_usd // 100_000)
+            if amount_usd > 10:
+                alert = "🚨" * int(amount_usd // 10)
                 tx_hash = record[1]
                 sender = record[2] if ".near" in record[2] else "unkown"
                 receiver = record[3] if ".near" in record[3] else "unkown"
                 for channel in self.channels:
                     await channel.send(
-                        f"{alert} {amount:,.2f} NEAR - equal {amount_usd:,.2f} USD -"
-                        f" transferred from {sender} to {receiver} wallet\n"
+                        f"{alert}\n"
+                        f"{amount:,.2f} NEAR ({amount_usd:,.0f} USD) "
+                        f"transferred from {sender} to {receiver} wallet\n"
                         f"https://explorer.near.org/transactions/{tx_hash}"
                     )
 
