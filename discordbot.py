@@ -8,7 +8,6 @@ import psycopg2
 from utils.db_queries import *
 
 # TOKEN = input("INPUT TOKEN:\n")
-TOKEN = "ODc2MTg4MTg4Njk4MzYxOTE2.YRgb1g.-P3ygTBPoscL-mpw-J9TiIXxjEY"
 
 
 class WhaleCord(discord.Client):
@@ -31,6 +30,7 @@ class WhaleCord(discord.Client):
         with open("subcribers.txt", "r") as f:
             id_channels = f.readlines()
             id_channels = [int(i.strip()) for i in id_channels]
+            id_channels = list(set(id_channels))
         self.channels = [self.get_channel(i) for i in id_channels]
         self.channels = [c for c in self.channels if c]  # Remove deleted channels
 
@@ -68,13 +68,16 @@ class WhaleCord(discord.Client):
                 tx_hash = record[1]
                 sender = record[2] if ".near" in record[2] else "unkown"
                 receiver = record[3] if ".near" in record[3] else "unkown"
-                for channel in self.channels:
-                    await channel.send(
-                        f"{alert}\n"
-                        f"{amount:,.2f} NEAR ({amount_usd:,.0f} USD) "
-                        f"transferred from {sender} to {receiver} wallet\n"
-                        f"https://explorer.near.org/transactions/{tx_hash}"
-                    )
+                for i, channel in enumerate(self.channels):
+                    try:
+                        await channel.send(
+                            f"{alert}\n"
+                            f"{amount:,.2f} NEAR ({amount_usd:,.0f} USD) "
+                            f"transferred from {sender} to {receiver} wallet\n"
+                            f"https://explorer.near.org/transactions/{tx_hash}"
+                        )
+                    except:
+                        self.channels.pop(i)
 
     async def get_near_price(self):
         while True:
@@ -92,6 +95,11 @@ class WhaleCord(discord.Client):
         if message.author.id == self.user.id:
             return
         if message.content.startswith("$add-whale"):
+            if message.channel in self.channels:
+                await message.channel.send(
+                    f"Channel {message.channel.name} is already in the subscriber channels"
+                )
+                return
             print(f"Adding channel {message.channel.name} id: {message.channel.id}")
             with open("subcribers.txt", "a") as f:
                 f.write(f"{message.channel.id}\n")
