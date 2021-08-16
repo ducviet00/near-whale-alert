@@ -43,9 +43,10 @@ class WhaleCord(discord.Client):
                     transactions.receiver_account_id, actions.args
                 FROM transaction_actions actions
                 INNER JOIN transactions ON transactions.transaction_hash = actions.transaction_hash
-                WHERE actions.action_kind = 'TRANSFER' and transactions.block_timestamp >  {self.last_time}
+                WHERE actions.action_kind = 'TRANSFER' and transactions.block_timestamp >  %s
                 ORDER BY transactions.block_timestamp asc;
-                """
+                """,
+                (self.last_time),
             )
             # col_names = cur.description
             # col_names = [c.name for c in col_names]
@@ -63,7 +64,7 @@ class WhaleCord(discord.Client):
             print(f"Length of queue: {self.transactions.qsize()}")
             amount = int(record[-1]["deposit"][0:-21]) / 1e3
             amount_usd = amount * self.near_price
-            if amount_usd > 100_000:
+            if amount_usd > 50_000:
                 alert = "🚨" * min(int(amount_usd // 100_000), 10)
                 tx_hash = record[1]
                 sender = record[2] if ".near" in record[2] else "unkown"
