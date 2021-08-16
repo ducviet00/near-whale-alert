@@ -6,6 +6,7 @@ import discord
 import psycopg2
 
 from utils.db_queries import *
+from utils.exchange_wallet import detect_wallet
 
 TOKEN = input("INPUT TOKEN:\n")
 
@@ -38,7 +39,7 @@ class WhaleCord(discord.Client):
         while True:
             cur = self.conn.cursor()
             cur.execute(
-                f"""
+                """
                 SELECT transactions.block_timestamp, transactions.transaction_hash, transactions.signer_account_id,
                     transactions.receiver_account_id, actions.args
                 FROM transaction_actions actions
@@ -46,7 +47,7 @@ class WhaleCord(discord.Client):
                 WHERE actions.action_kind = 'TRANSFER' and transactions.block_timestamp >  %s
                 ORDER BY transactions.block_timestamp asc;
                 """,
-                (self.last_time),
+                (self.last_time,),
             )
             # col_names = cur.description
             # col_names = [c.name for c in col_names]
@@ -54,7 +55,7 @@ class WhaleCord(discord.Client):
                 print(f"Adding {cur.rowcount} transactions to the queue")
             for record in cur:
                 await self.transactions.put(record)
-                self.last_time = record[0]  # block_timestamp
+                self.last_time = str(record[0])  # block_timestamp
             await asyncio.sleep(30)
 
     async def alert(self):
@@ -62,13 +63,16 @@ class WhaleCord(discord.Client):
         while True:
             record = await self.transactions.get()
             print(f"Length of queue: {self.transactions.qsize()}")
+            if not record[-1]["deposit"]:
+                continue
             amount = int(record[-1]["deposit"][0:-21]) / 1e3
             amount_usd = amount * self.near_price
             if amount_usd > 50_000:
                 alert = "🚨" * min(int(amount_usd // 100_000), 10)
                 tx_hash = record[1]
-                sender = record[2] if ".near" in record[2] else "unkown"
-                receiver = record[3] if ".near" in record[3] else "unkown"
+                sender = detect_wallet(record[2])
+                receiver = detect_wallet(record[3])
+
                 for i, channel in enumerate(self.channels):
                     try:
                         await channel.send(
