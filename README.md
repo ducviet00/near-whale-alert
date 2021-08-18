@@ -8,9 +8,9 @@ Discord Bot is online now. You can add it to your own server by [invite link](ht
 
 Commands:
 
-- `$add-whale-alert`: Add bot to channel
+- `$add-whale-alert threshold`: Add bot to channel. If a threshold is attached, threshold will be set to it, ortherwise threshold is 200.000$
 - `$rm-whale-alert`: Remove bot in channel
-- `$set-alert price`: set threshold of filter to price, default is 50.000\$. price >= 50.000\$
+- `$set-alert threshold`: set threshold of filter to threshold.
 
 ## TODO
 - [x] Determine exchange's wallets
