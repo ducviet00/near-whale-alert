@@ -14,7 +14,7 @@ Commands:
 
 ## TODO
 - [x] Determine exchange's wallets
-- [ ] Let user customize their filter
+- [x] Let user customize their filter
 - [ ] Telegram bot
 - [ ] Website to tracking abnormal transactions
 - [ ] Website to tracking top holder wallet changes
